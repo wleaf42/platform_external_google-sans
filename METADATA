@@ -1,0 +1,22 @@
+name: "google-sans"
+description:
+    "Google Sans and Google Sans Flex, modified from the openly licensed versions in"
+    "google/fonts by tools/preprocess.py (see README.md)."
+
+third_party {
+  url {
+    type: HOMEPAGE
+    value: "https://github.com/google/fonts/tree/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/googlesans"
+  }
+  url {
+    type: HOMEPAGE
+    value: "https://github.com/google/fonts/tree/47d54ca1ebb14fd864695f1d39dc734f39017c33/ofl/googlesansflex"
+  }
+  url {
+    type: GIT
+    value: "https://github.com/google/fonts"
+  }
+  version: "47d54ca1ebb14fd864695f1d39dc734f39017c33"
+  last_upgrade_date { year: 2026 month: 10 day: 21 }
+  license_type: NOTICE
+}
