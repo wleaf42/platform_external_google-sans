@@ -47,7 +47,8 @@ python3 -I tools/verify_preprocess.py --fonttools ../../fonttools/Lib --input /t
 
 ## Differences from Pixel
 
-- There are no clock families, because Google's clock fonts are not openly licensed.
+- Google's clock fonts are not openly licensed, so `google-sans-flex-clock` uses Google Sans
+  Flex itself and `google-sans-clock` is not defined.
 - Google Sans Flex has no `GRAD` axis, so no `GRAD` values are set for it.
 - Google Sans 14.000 is newer than the Pixel build. Some glyphs differ slightly
   (ł Ł ° ¼ ½ ¾ Ŋ ĳ ß 1 7 9) and some strings range from 2% narrower to 2.4% wider.

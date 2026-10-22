@@ -138,6 +138,11 @@
       </font>
     </family>
   </family-list>
+  <!-- Lockscreen clock, using Google Sans Flex because the Pixel clock font is not openly licensed -->
+  <family customizationType="new-named-family" name="google-sans-flex-clock" fallback="google-sans">
+    <!-- Only one font is needed because the clock sets the wght, wdth, ROND and slnt axes itself -->
+    <font>GoogleSansFlex-Regular.ttf</font>
+  </family>
   <!-- Material 3 type scale -->
   <family customizationType="new-named-family" name="variable-display-large" fallback="google-sans">
     <font weight="400" style="normal">GoogleSansFlex-Regular.ttf
