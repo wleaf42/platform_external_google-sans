@@ -116,6 +116,12 @@ GOOGLE_SANS_GSUB_FEATURES = {
 }
 GOOGLE_SANS_GPOS_FEATURES = {"kern", "locl", "mark", "mkmk"}
 
+# OpenType scripts of the Pixel build. The others belong to removed scripts, and their
+# locl glyphs are unreachable because minikin picks the script within each font run.
+# Text of no script (digits and punctuation) uses latn, as HarfBuzz falls back to it
+# without DFLT.
+GOOGLE_SANS_LAYOUT_SCRIPTS = ["cyrl", "grek", "hebr", "latn"]
+
 # Upstream sizes these (1509/1079) for the removed scripts. The Pixel values fit the
 # kept glyphs (yMax 1056, yMin -381), so all vertical metrics match Pixel. Google Sans
 # Flex already has the Pixel values.
@@ -136,6 +142,7 @@ FONTS = [
         "family": "google-sans",
         "gsub_features": GOOGLE_SANS_GSUB_FEATURES,
         "gpos_features": GOOGLE_SANS_GPOS_FEATURES,
+        "layout_scripts": GOOGLE_SANS_LAYOUT_SCRIPTS,
     },
     {
         "source": "ofl/googlesans/GoogleSans-Italic[GRAD,opsz,wght].ttf",
@@ -145,15 +152,17 @@ FONTS = [
         # Upstream Italic has no ss03.
         "gsub_features": GOOGLE_SANS_GSUB_FEATURES - {"ss03"},
         "gpos_features": GOOGLE_SANS_GPOS_FEATURES,
+        "layout_scripts": GOOGLE_SANS_LAYOUT_SCRIPTS,
     },
     {
         "source": "ofl/googlesansflex/GoogleSansFlex[ROND,opsz,slnt,wdth,wght].ttf",
         "sha256": "a9ac770798857d5e8ac593ced42b22e40a7c08cec98319f92b0eccc2783a77ba",
         "output": "GoogleSansFlex-Regular.ttf",
         "family": "google-sans-flex",
-        # Already matches the Pixel build, so no feature is removed.
+        # Already matches the Pixel build, so no feature or script is removed.
         "gsub_features": None,
         "gpos_features": None,
+        "layout_scripts": None,
     },
 ]
 
@@ -198,7 +207,7 @@ def kept_codepoints(font, family):
     return kept, applied_exclusions
 
 
-def subsetter_options():
+def subsetter_options(layout_scripts):
     from fontTools import subset
 
     options = subset.Options()
@@ -215,8 +224,9 @@ def subsetter_options():
     # Keep hinting so small sizes render as upstream.
     options.hinting = True
     # prune_features already removed the unwanted features, so keep everything left.
+    # Removing scripts also drops the features and lookups only they reference.
     options.layout_features = ["*"]
-    options.layout_scripts = ["*"]
+    options.layout_scripts = layout_scripts or ["*"]
     # Keep every table so nothing changes beyond the listed modifications. The subsetter
     # cannot subset BASE, but BASE references no glyphs, so it passes through unchanged.
     options.drop_tables = []
@@ -339,7 +349,9 @@ def process(font_definition, arguments):
     # Glyphs reachable through the remaining features are kept, so alternates, small
     # caps and ligatures keep working. Glyph identifiers are renumbered, and the glyph
     # data is not changed.
-    subsetter = subset.Subsetter(options=subsetter_options())
+    subsetter = subset.Subsetter(
+        options=subsetter_options(font_definition["layout_scripts"])
+    )
     subsetter.populate(unicodes=sorted(codepoints))
     subsetter.subset(font)
 

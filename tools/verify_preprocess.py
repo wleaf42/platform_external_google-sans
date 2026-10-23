@@ -12,7 +12,7 @@ For each shipped font and its pinned input, checks that
   - the cmap follows the codepoint rule
   - kept glyphs keep their name, outline, bounds, instructions, metrics and gvar data
   - outlines and advances match at several axis locations
-  - GSUB and GPOS have the expected features, with unchanged single, multiple,
+  - GSUB and GPOS have the expected scripts and features, with unchanged single, multiple,
     alternate and ligature substitutions and unchanged kerning at the default location
   - no logo glyph is left
 
@@ -210,15 +210,46 @@ def recorded(glyph_set, name):
     return pen.value, glyph_set[name].width
 
 
-def feature_lookups(font, tag):
+def script_feature_indices(font, tag, scripts):
+    indices = set()
+    for script_record in font[tag].table.ScriptList.ScriptRecord:
+        if script_record.ScriptTag not in scripts:
+            continue
+        script = script_record.Script
+        language_systems = [script.DefaultLangSys] + [
+            language_record.LangSys for language_record in script.LangSysRecord
+        ]
+        for language_system in language_systems:
+            if language_system is None:
+                continue
+            indices.update(language_system.FeatureIndex)
+            if language_system.ReqFeatureIndex != 0xFFFF:
+                indices.add(language_system.ReqFeatureIndex)
+    return indices
+
+
+def feature_lookups(font, tag, scripts=None):
+    """Return the lookups of each feature, only those of scripts if given."""
     lookups_by_feature = {}
     if tag not in font or not font[tag].table.FeatureList:
         return lookups_by_feature
-    for feature_record in font[tag].table.FeatureList.FeatureRecord:
+    indices = None if scripts is None else script_feature_indices(font, tag, scripts)
+    for index, feature_record in enumerate(font[tag].table.FeatureList.FeatureRecord):
+        if indices is not None and index not in indices:
+            continue
         lookups_by_feature.setdefault(feature_record.FeatureTag, set()).update(
             feature_record.Feature.LookupListIndex
         )
     return lookups_by_feature
+
+
+def script_tags(font, tag):
+    if tag not in font or not font[tag].table.ScriptList:
+        return set()
+    return {
+        script_record.ScriptTag
+        for script_record in font[tag].table.ScriptList.ScriptRecord
+    }
 
 
 def subtables(lookup):
@@ -229,10 +260,10 @@ def subtables(lookup):
             yield subtable, lookup.LookupType
 
 
-def flatten_gsub(font, feature, kept_glyphs):
+def flatten_gsub(font, feature, kept_glyphs, scripts):
     rules = set()
     lookups = font["GSUB"].table.LookupList.Lookup
-    for lookup_index in feature_lookups(font, "GSUB").get(feature, ()):
+    for lookup_index in feature_lookups(font, "GSUB", scripts).get(feature, ()):
         for subtable, kind in subtables(lookups[lookup_index]):
             if kind == 1:
                 rules |= {
@@ -265,12 +296,12 @@ def flatten_gsub(font, feature, kept_glyphs):
     return rules
 
 
-def flatten_kern(font, kept_glyphs):
+def flatten_kern(font, kept_glyphs, scripts):
     pairs = {}
     if "GPOS" not in font:
         return pairs
     lookups = font["GPOS"].table.LookupList.Lookup
-    for lookup_index in sorted(feature_lookups(font, "GPOS").get("kern", ())):
+    for lookup_index in sorted(feature_lookups(font, "GPOS", scripts).get("kern", ())):
         for subtable, kind in subtables(lookups[lookup_index]):
             if kind != 2:
                 continue
@@ -461,20 +492,33 @@ def verify_font(font_definition, arguments, preprocess):
         )
         removed = sorted(source_features - output_features)
         print(f"  {tag} features: {sorted(output_features)} (removed {removed})")
+        source_scripts = script_tags(source, tag)
+        output_scripts = script_tags(output, tag)
+        wanted_scripts = font_definition["layout_scripts"]
+        expected_scripts = (
+            source_scripts if wanted_scripts is None else set(wanted_scripts) & source_scripts
+        )
+        check(
+            output_scripts == expected_scripts,
+            f"{tag} scripts {sorted(output_scripts)} != expected {sorted(expected_scripts)}",
+        )
+        print(f"  {tag} scripts: {sorted(output_scripts)}")
     # Contextual and chaining rules (lookup types 5 and 6) are not compared, because
-    # that needs a shaping engine.
+    # that needs a shaping engine. Rules only reachable through removed scripts are
+    # expected to go, so the input is compared through the kept scripts only.
+    scripts = font_definition["layout_scripts"]
     rule_count = 0
     same = True
     for feature in sorted(feature_lookups(output, "GSUB")):
-        source_rules = flatten_gsub(source, feature, kept_glyphs)
-        output_rules = flatten_gsub(output, feature, kept_glyphs)
+        source_rules = flatten_gsub(source, feature, kept_glyphs, scripts)
+        output_rules = flatten_gsub(output, feature, kept_glyphs, scripts)
         same &= check(
             source_rules == output_rules,
             f"GSUB {feature} substitutions differ: {len(source_rules ^ output_rules)} rules",
         )
         rule_count += len(output_rules)
-    source_kerning = flatten_kern(source, kept_glyphs)
-    output_kerning = flatten_kern(output, kept_glyphs)
+    source_kerning = flatten_kern(source, kept_glyphs, scripts)
+    output_kerning = flatten_kern(output, kept_glyphs, scripts)
     kerning_differences = set(source_kerning.items()) ^ set(output_kerning.items())
     check(
         source_kerning == output_kerning,

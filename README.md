@@ -18,8 +18,9 @@ The inputs are Google Sans 14.000 and Google Sans Flex 5.000 from `ofl/googlesan
 - Private Use Area characters, the Google logo glyphs at U+E000..U+E006 among them, and
   the ligatures producing the logos are removed.
 - Google Sans covers only Latin, Greek, Cyrillic, Hebrew, Common and Inherited, minus
-  `GOOGLE_SANS_EXCLUDE`. Its GSUB and GPOS features are limited to those of the Pixel
-  build, usWinAscent/usWinDescent are 1057/382, and its head bounds are recalculated.
+  `GOOGLE_SANS_EXCLUDE`. Its GSUB and GPOS scripts and features are limited to those of
+  the Pixel build, usWinAscent/usWinDescent are 1057/382, and its head bounds are
+  recalculated.
 - Google Sans Flex drops `GOOGLE_SANS_FLEX_EXCLUDE` and has head.yMax set to 2007.
 - Outlines, advances and variation data of kept glyphs are unchanged.
 
