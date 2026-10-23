@@ -49,12 +49,24 @@ python3 -I tools/preprocess.py --fonttools ../../fonttools/Lib --input /tmp/goog
 python3 -I tools/verify_preprocess.py --fonttools ../../fonttools/Lib --input /tmp/google-fonts
 ```
 
-## Differences from Pixel
+## Pixel font reference
+
+The Pixel font values used here (coverage, exclusions, scripts, features, vertical
+metrics) were compared against these Pixel fonts from `/product/fonts` of the blazer
+factory image CP3A.261005.005:
+
+| File | Version | sha256 |
+| --- | --- | --- |
+| `GoogleSans-Regular.ttf` | 10.001 | `def0489274d4c65092950acb870b7b65b610dca03d3bcfb3cd5c083189bf0956` |
+| `GoogleSans-Italic.ttf` | 10.001 | `7ce25d8b6eea597fa7b97cba71db9315bec722dab56c8ed71662e81bf45fcc9a` |
+| `GoogleSansFlex-Regular.ttf` | 4.001 | `83a85228956fcdfab605fc72f421eb0a416563d57d4eb0944396c02d874fe2a6` |
+
+## Differences from the Pixel fonts
 
 - Google's clock fonts are not openly licensed, so `google-sans-flex-clock` uses Google Sans
   Flex itself and `google-sans-clock` is not defined.
 - Google Sans Flex has no `GRAD` axis, so no `GRAD` values are set for it.
-- Google Sans 14.000 is newer than the Pixel build. Some glyphs differ slightly
+- Google Sans 14.000 is newer than the Pixel font (10.001). Some glyphs differ slightly
   (ł Ł ° ¼ ½ ¾ Ŋ ĳ ß 1 7 9) and some strings range from 2% narrower to 2.4% wider.
 
 ## License
