@@ -134,6 +134,12 @@ GOOGLE_SANS_WINDOWS_DESCENT = 382
 # same way (check_vertical_metrics in fontchain_linter.py).
 GOOGLE_SANS_FLEX_HEAD_Y_MAXIMUM = 2007
 
+# The Pixel fonts have no BASE table. With the language_specific_extent flag, minikin
+# extends each line by the BASE extents of the run's script and locale, which are larger
+# than hhea upstream. Without BASE, line heights come from hhea alone and match the
+# Pixel fonts.
+DROPPED_TABLES = ["BASE"]
+
 FONTS = [
     {
         "source": "ofl/googlesans/GoogleSans[GRAD,opsz,wght].ttf",
@@ -227,9 +233,8 @@ def subsetter_options(layout_scripts):
     # Removing scripts also drops the features and lookups only they reference.
     options.layout_features = ["*"]
     options.layout_scripts = layout_scripts or ["*"]
-    # Keep every table so nothing changes beyond the listed modifications. The subsetter
-    # cannot subset BASE, but BASE references no glyphs, so it passes through unchanged.
-    options.drop_tables = []
+    # Keep every other table so nothing changes beyond the listed modifications.
+    options.drop_tables = DROPPED_TABLES
     options.passthrough_tables = True
     # Do not recompute range bits, average width, context or timestamp, so they stay as
     # upstream and the output is reproducible.

@@ -22,6 +22,9 @@ The inputs are Google Sans 14.000 and Google Sans Flex 5.000 from `ofl/googlesan
   the Pixel build, usWinAscent/usWinDescent are 1057/382, and its head bounds are
   recalculated.
 - Google Sans Flex drops `GOOGLE_SANS_FLEX_EXCLUDE` and has head.yMax set to 2007.
+- The BASE table is removed from both, as the Pixel fonts have none. Minikin extends
+  lines by its per-script extents, which are larger than hhea and made lines taller
+  than with the Pixel fonts.
 - Outlines, advances and variation data of kept glyphs are unchanged.
 
 `tools/preprocess.py --print-codepoints` prints the kept codepoints.

@@ -7,7 +7,7 @@ Usage:
 
 For each shipped font and its pinned input, checks that
   - a fresh run of preprocess.py reproduces the shipped files byte for byte
-  - the table set is the same and tables without glyph references are byte-identical
+  - only DROPPED_TABLES are removed and tables without glyph references are byte-identical
   - head, hhea, maxp and OS/2 change only in the allowed fields
   - the cmap follows the codepoint rule
   - kept glyphs keep their name, outline, bounds, instructions, metrics and gvar data
@@ -36,7 +36,6 @@ IDENTICAL_TABLES = [
     "avar",
     "STAT",
     "name",
-    "BASE",
     "gasp",
     "prep",
     "cvt ",
@@ -369,9 +368,10 @@ def verify_font(font_definition, arguments, preprocess):
     source = TTFont(source_path)
     output = TTFont(output_path)
 
+    expected_tables = sorted(set(source.keys()) - set(preprocess.DROPPED_TABLES))
     check(
-        sorted(source.keys()) == sorted(output.keys()),
-        f"table set differs: {sorted(source.keys())} vs {sorted(output.keys())}",
+        sorted(output.keys()) == expected_tables,
+        f"table set differs: {sorted(output.keys())} vs expected {expected_tables}",
     )
     for tag in IDENTICAL_TABLES:
         if tag in source:
