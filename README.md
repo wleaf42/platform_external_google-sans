@@ -50,6 +50,7 @@ git -C /tmp/google-fonts sparse-checkout set ofl/googlesans ofl/googlesansflex
 git -C /tmp/google-fonts checkout "$COMMIT"
 TOOLS="--fonttools ../../fonttools/Lib --pyyaml ../../python/pyyaml/lib"
 python3 -I tools/generate_fonts.py $TOOLS --input /tmp/google-fonts --output .
+python3 -I tools/check_fonts.py $TOOLS --input /tmp/google-fonts
 ```
 
 ## Pixel font reference
