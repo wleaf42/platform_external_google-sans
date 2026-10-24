@@ -1,0 +1,58 @@
+package {
+    default_applicable_licenses: ["external_google-fonts_google-sans_license"],
+}
+
+license {
+    name: "external_google-fonts_google-sans_license",
+    visibility: [":__subpackages__"],
+    license_kinds: [
+        "SPDX-license-identifier-OFL-1.1-no-RFN",
+    ],
+    license_text: [
+        "OFL-GoogleSans.txt",
+        "OFL-GoogleSansFlex.txt",
+    ],
+}
+
+prebuilt_font {
+    name: "GoogleSans-Regular.ttf",
+    src: "GoogleSans-Regular.ttf",
+    product_specific: true,
+}
+
+prebuilt_font {
+    name: "GoogleSans-Italic.ttf",
+    src: "GoogleSans-Italic.ttf",
+    product_specific: true,
+}
+
+prebuilt_font {
+    name: "GoogleSansFlex-Regular.ttf",
+    src: "GoogleSansFlex-Regular.ttf",
+    product_specific: true,
+}
+
+// Installed as /product/etc/fonts_customization.xml, the file the framework reads the
+// named families from (SystemFonts.OEM_XML).
+prebuilt_etc {
+    name: "fonts_customization.xml.google-sans",
+    src: "fonts_customization.xml",
+    filename: "fonts_customization.xml",
+    product_specific: true,
+}
+
+// Google Sans and Google Sans Flex with their named families and the font configuration
+// of the framework, DocumentsUI and AvatarPicker.
+phony {
+    name: "google-sans-fonts",
+    product_specific: true,
+    required: [
+        "GoogleSans-Regular.ttf",
+        "GoogleSans-Italic.ttf",
+        "GoogleSansFlex-Regular.ttf",
+        "fonts_customization.xml.google-sans",
+        "GoogleSansConfigOverlay",
+        "GoogleSansDocumentsUIOverlay",
+        "GoogleSansAvatarPickerOverlay",
+    ],
+}

@@ -2,6 +2,11 @@
 
 Defines the `google-sans*` and `variable-*` font families used by AOSP system UI code.
 
+`google-sans-fonts` installs the fonts to `/product/fonts`, the families to
+`/product/etc/fonts_customization.xml`, and the overlays `GoogleSansConfigOverlay`,
+`GoogleSansDocumentsUIOverlay` and `GoogleSansAvatarPickerOverlay` from
+frameworks/base/packages/overlays.
+
 ## Source
 
 The inputs are Google Sans 14.000 and Google Sans Flex 5.000 from `ofl/googlesans` and
