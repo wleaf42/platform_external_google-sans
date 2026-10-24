@@ -1,0 +1,20 @@
+# Pinned google/fonts inputs of tools/generate_fonts.py, by output font.
+
+repository: https://github.com/google/fonts
+commit: 47d54ca1ebb14fd864695f1d39dc734f39017c33
+
+fonts:
+  GoogleSans-Regular.ttf:
+    source: ofl/googlesans/GoogleSans[GRAD,opsz,wght].ttf
+    sha256: d0a87d835a944b8b40d0e82a5651bb59ab97b936a2aeed5946eb57e7b2a3a90a
+  GoogleSans-Italic.ttf:
+    source: ofl/googlesans/GoogleSans-Italic[GRAD,opsz,wght].ttf
+    sha256: b6662abd2131cad1b248750149a7f2b644f871ebcc9af7fe4cd1135cd290b6d1
+  GoogleSansFlex-Regular.ttf:
+    source: ofl/googlesansflex/GoogleSansFlex[ROND,opsz,slnt,wdth,wght].ttf
+    sha256: a9ac770798857d5e8ac593ced42b22e40a7c08cec98319f92b0eccc2783a77ba
+
+# Copied unchanged because the OFL requires its text to ship with the fonts.
+licenses:
+  OFL-GoogleSans.txt: ofl/googlesans/OFL.txt
+  OFL-GoogleSansFlex.txt: ofl/googlesansflex/OFL.txt
