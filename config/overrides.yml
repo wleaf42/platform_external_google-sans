@@ -1,0 +1,32 @@
+# Deliberate differences from the Pixel fonts described in config/reference/.
+
+# Reason: Private Use Area. U+E000..=U+E006 are Google logos, and TRADEMARKS.md in
+# google/fonts forbids uses that suggest affiliation with Google. The ligatures producing
+# them from text such as "Google_logo" are removed too.
+remove_codepoints:
+  - U+E000..=U+F8FF
+  - U+F0000..=U+FFFFD
+  - U+100000..=U+10FFFD
+
+fonts:
+  GoogleSans-Regular.ttf:
+    # Reason: the Pixel values describe the Pixel glyphs, which include the removed logos.
+    recalculate:
+      - head.xMin
+      - head.xMax
+    # Reason: empty control character glyphs of the Pixel fonts that upstream does not have.
+    missing_upstream:
+      - U+0002
+      - U+0009
+  GoogleSans-Italic.ttf:
+    # Reason: the Pixel values describe the Pixel glyphs, which include the removed logos.
+    recalculate:
+      - head.xMin
+      - head.xMax
+    # Reason: empty control character glyphs of the Pixel fonts that upstream does not have.
+    missing_upstream:
+      - U+0002
+      - U+0009
+  GoogleSansFlex-Regular.ttf:
+    recalculate: []
+    missing_upstream: []

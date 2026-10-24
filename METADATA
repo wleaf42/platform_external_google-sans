@@ -1,7 +1,7 @@
 name: "google-sans"
 description:
     "Google Sans and Google Sans Flex, modified from the openly licensed versions in"
-    "google/fonts by tools/preprocess.py (see README.md)."
+    "google/fonts by tools/generate_fonts.py (see README.md)."
 
 third_party {
   url {

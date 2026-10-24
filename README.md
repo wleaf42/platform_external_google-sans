@@ -10,24 +10,31 @@ frameworks/base/packages/overlays.
 ## Source
 
 The inputs are Google Sans 14.000 and Google Sans Flex 5.000 from `ofl/googlesans` and
-`ofl/googlesansflex` of google/fonts at commit `47d54ca1ebb14fd864695f1d39dc734f39017c33`.
-`tools/preprocess.py` pins their sha256.
+`ofl/googlesansflex` of google/fonts. `config/upstream.yml` pins the commit and their
+sha256.
 
 ## Modifications
 
-- Private Use Area characters, the Google logo glyphs at U+E000..U+E006 among them, and
-  the ligatures producing the logos are removed.
-- Google Sans covers only Latin, Greek, Cyrillic, Hebrew, Common and Inherited, minus
-  `GOOGLE_SANS_EXCLUDE`. Its GSUB and GPOS scripts and features are limited to those of
-  the Pixel build, usWinAscent/usWinDescent are 1057/382, and its head bounds are
-  recalculated.
-- Google Sans Flex drops `GOOGLE_SANS_FLEX_EXCLUDE` and has head.yMax set to 2007.
-- The BASE table is removed from both, as the Pixel fonts have none. Minikin extends
-  lines by its per-script extents, which are larger than hhea and made lines taller
-  than with the Pixel fonts.
-- Outlines, advances and variation data of kept glyphs are unchanged.
+The shipped fonts follow the Pixel fonts described in `config/reference/`, limited to
+what upstream has:
 
-`tools/preprocess.py --print-codepoints` prints the kept codepoints.
+- Coverage, GSUB and GPOS scripts and features, and the table set are the Pixel fonts'.
+  This removes the scripts Google Sans has beyond Latin, Greek, Cyrillic and Hebrew, and
+  the BASE table of both fonts and HVAR of Google Sans Flex. Minikin extends lines by the
+  BASE per-script extents, which are larger than hhea and made lines taller than with the
+  Pixel fonts. The advance variations of Google Sans Flex stay in gvar.
+- usWinAscent/usWinDescent and head yMin/yMax are the Pixel fonts'.
+
+`config/overrides.yml` lists the deliberate differences with their reasons:
+
+- Private Use Area characters, the Google logo glyphs at U+E000..=U+E006 among them, and
+  the ligatures producing the logos are removed.
+- head xMin/xMax of Google Sans are recalculated from the kept glyphs.
+- U+0002 and U+0009 of the Pixel Google Sans are missing upstream.
+
+Outlines, advances and variation data of kept glyphs are unchanged.
+
+`tools/generate_fonts.py --print-codepoints` prints the kept codepoints.
 
 ## Font families
 
@@ -41,25 +48,27 @@ others), which are left out because this module only provides Google Sans.
 ## Regenerating
 
 ```sh
+cd "$ANDROID_BUILD_TOP/external/google-fonts/google-sans"
+COMMIT=$(yq -r .commit config/upstream.yml)
 git clone --filter=blob:none --no-checkout https://github.com/google/fonts /tmp/google-fonts
 git -C /tmp/google-fonts sparse-checkout set ofl/googlesans ofl/googlesansflex
-git -C /tmp/google-fonts checkout 47d54ca1ebb14fd864695f1d39dc734f39017c33
-cd "$ANDROID_BUILD_TOP/external/google-fonts/google-sans"
-python3 -I tools/preprocess.py --fonttools ../../fonttools/Lib --input /tmp/google-fonts --output .
-python3 -I tools/verify_preprocess.py --fonttools ../../fonttools/Lib --input /tmp/google-fonts
+git -C /tmp/google-fonts checkout "$COMMIT"
+TOOLS="--fonttools ../../fonttools/Lib --pyyaml ../../python/pyyaml/lib"
+python3 -I tools/generate_fonts.py $TOOLS --input /tmp/google-fonts --output .
+python3 -I tools/check_fonts.py $TOOLS --input /tmp/google-fonts
 ```
 
 ## Pixel font reference
 
-The Pixel font values used here (coverage, exclusions, scripts, features, vertical
-metrics) were compared against these Pixel fonts from `/product/fonts` of the blazer
-factory image CP3A.261005.005:
+`config/reference/` describes the Pixel fonts from `/product/fonts` of a Pixel factory
+image, with their version and sha256. Only refreshing it needs the image, for example
+extracted by adevtool:
 
-| File | Version | sha256 |
-| --- | --- | --- |
-| `GoogleSans-Regular.ttf` | 10.001 | `def0489274d4c65092950acb870b7b65b610dca03d3bcfb3cd5c083189bf0956` |
-| `GoogleSans-Italic.ttf` | 10.001 | `7ce25d8b6eea597fa7b97cba71db9315bec722dab56c8ed71662e81bf45fcc9a` |
-| `GoogleSansFlex-Regular.ttf` | 4.001 | `83a85228956fcdfab605fc72f421eb0a416563d57d4eb0944396c02d874fe2a6` |
+```sh
+python3 -I tools/extract_reference.py $TOOLS \
+    --pixel-fonts ../../../vendor/adevtool/dl/unpacked/blazer-CP3A.261005.005/product/fonts \
+    --image "blazer CP3A.261005.005"
+```
 
 ## Differences from the Pixel fonts
 
