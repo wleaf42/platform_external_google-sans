@@ -688,7 +688,7 @@ def check_font(output_name, upstream_font, overrides, customization, arguments):
     reference = common.load_yaml(common.reference_path(output_name))
     font_overrides = overrides["fonts"][output_name]
 
-    print(f"== {output_name}")
+    print(output_name)
     pixel = reference["source"]
     print(f"  reference: {pixel['file']} {pixel['version']} ({pixel['image']})")
     print(f"  reference sha256: {pixel['sha256']}")
