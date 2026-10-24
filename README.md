@@ -1,5 +1,7 @@
 # Google Sans and Google Sans Flex
 
+Defines the `google-sans*` and `variable-*` font families used by AOSP system UI code.
+
 ## Source
 
 The inputs are Google Sans 14.000 and Google Sans Flex 5.000 from `ofl/googlesans` and
@@ -29,6 +31,15 @@ The google/fonts fonts are cut down to the Pixel fonts described in
 
 Outlines, advances and variation data of kept glyphs are unchanged.
 
+## Font families
+
+`fonts_customization.xml` is written for this module. Its family names, weights, axis
+values and fallbacks follow the Pixel system image, because AOSP code requests these
+families by name (for example `variable-label-large-emphasized` for the status bar clock)
+and the values decide how that text looks. Only these values were taken from Pixel, not
+the file itself. The Pixel file also defines families for other fonts (Lato, Rubik and
+others), which are left out because this module only provides Google Sans.
+
 ## Regenerating
 
 ```sh
@@ -55,6 +66,8 @@ python3 -I tools/extract_reference.py $TOOLS \
 
 ## Differences from the Pixel fonts
 
+- There are no clock families, because Google's clock fonts are not openly licensed.
+- Google Sans Flex has no `GRAD` axis, so no `GRAD` values are set for it.
 - Google Sans 14.000 is newer than the Pixel font (10.001). Some glyphs differ slightly
   (ł Ł ° ¼ ½ ¾ Ŋ ĳ ß 1 7 9) and some strings range from 2% narrower to 2.4% wider.
 
