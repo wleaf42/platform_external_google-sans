@@ -1,0 +1,41 @@
+# Deliberate differences from the Pixel fonts described in config/reference/.
+
+# Reason: Private Use Area, with the Google logos at U+E000..=U+E006. TRADEMARKS.md in
+# google/fonts forbids uses that suggest affiliation with Google. The ligatures
+# producing the logos are removed too.
+remove_codepoints:
+  - U+E000..=U+F8FF # Private Use Area
+  - U+F0000..=U+FFFFD # Supplementary Private Use Area-A (plane 15)
+  - U+100000..=U+10FFFD # Supplementary Private Use Area-B (plane 16)
+
+fonts:
+  GoogleSans-Regular.ttf:
+    # Reason: the stored values were computed over pre-patch glyph sets, so they are
+    # computed again from the kept glyphs.
+    recalculate:
+      - maxp.recalc # maxp maxima and head xMin/xMax (head yMin/yMax come from the reference)
+      - hhea.recalc # advanceWidthMax, minLeftSideBearing, minRightSideBearing, xMaxExtent
+      - OS/2.recalcAvgCharWidth # xAvgCharWidth
+    # Reason: empty control character glyphs of the Pixel fonts, google/fonts has none.
+    assert_missing_codepoints:
+      - U+0002
+      - U+0009
+  GoogleSans-Italic.ttf:
+    # Reason: the stored values were computed over pre-patch glyph sets, so they are
+    # computed again from the kept glyphs.
+    recalculate:
+      - maxp.recalc # maxp maxima and head xMin/xMax (head yMin/yMax come from the reference)
+      - hhea.recalc # advanceWidthMax, minLeftSideBearing, minRightSideBearing, xMaxExtent
+      - OS/2.recalcAvgCharWidth # xAvgCharWidth
+    # Reason: empty control character glyphs of the Pixel fonts, google/fonts has none.
+    assert_missing_codepoints:
+      - U+0002
+      - U+0009
+  GoogleSansFlex-Regular.ttf:
+    # Reason: the stored values were computed over pre-patch glyph sets, so they are
+    # computed again from the kept glyphs.
+    recalculate:
+      - maxp.recalc # maxp maxima and head xMin/xMax (head yMin/yMax come from the reference)
+      - hhea.recalc # advanceWidthMax, minLeftSideBearing, minRightSideBearing, xMaxExtent
+      - OS/2.recalcAvgCharWidth # xAvgCharWidth
+    assert_missing_codepoints: []
