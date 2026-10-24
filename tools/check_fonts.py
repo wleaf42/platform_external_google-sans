@@ -15,7 +15,8 @@ For each shipped font and its pinned input, checks that
   - the cmap is the reference's minus config/overrides.yml, and only the listed
     codepoints of the reference are missing upstream
   - kept glyphs keep their name, outline, bounds, instructions, metrics and gvar data
-  - outlines and advances match at several axis locations
+  - outlines and advances match at the default and the axis extremes, and advances at
+    every location fonts_customization.xml uses
   - GSUB and GPOS have the reference scripts and features, with unchanged single,
     multiple, alternate and ligature substitutions and unchanged kerning at the default
     location
@@ -27,10 +28,12 @@ variations.
 """
 
 import argparse
+import concurrent.futures
 import os
 import subprocess
 import sys
 import tempfile
+import xml.etree.ElementTree
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import common
@@ -65,31 +68,10 @@ SUBSET_CHANGES = {
     "hhea": {"numberOfHMetrics"},
 }
 
-# Some of the locations fonts_customization.xml uses, plus the axis extremes, where
-# variation errors would show most.
-GOOGLE_SANS_LOCATIONS = [
-    {"wght": 400, "opsz": 17, "GRAD": 0},
-    {"wght": 500, "opsz": 18, "GRAD": 0},
-    {"wght": 600, "opsz": 17, "GRAD": 0},
-    {"wght": 700, "opsz": 18, "GRAD": 0},
-    {"wght": 700, "opsz": 17, "GRAD": -50},
-    {"wght": 400, "opsz": 18, "GRAD": 200},
-]
-LOCATIONS = {
-    "GoogleSans-Regular.ttf": GOOGLE_SANS_LOCATIONS,
-    "GoogleSans-Italic.ttf": GOOGLE_SANS_LOCATIONS,
-    "GoogleSansFlex-Regular.ttf": [
-        {"wght": 100, "opsz": 11, "wdth": 100, "ROND": 0, "slnt": 0},
-        {"wght": 400, "opsz": 14, "wdth": 100, "ROND": 0, "slnt": -10},
-        {"wght": 600, "opsz": 16, "wdth": 100, "ROND": 100, "slnt": 0},
-        {"wght": 800, "opsz": 32, "wdth": 100, "ROND": 100, "slnt": 0},
-        {"wght": 1000, "opsz": 57, "wdth": 100, "ROND": 100, "slnt": 0},
-        {"wght": 1, "opsz": 1, "wdth": 25, "ROND": 0, "slnt": -10},
-        {"wght": 1000, "opsz": 144, "wdth": 151, "ROND": 100, "slnt": 0},
-    ],
-}
-
 failures = []
+
+# The fonts of the process comparing glyphs at locations, set by start_worker.
+worker = {}
 
 
 def check(condition, message):
@@ -205,22 +187,83 @@ def gvar_record(font, name):
     ]
 
 
-def recorded(glyph_set, name):
-    from fontTools.pens.recordingPen import RecordingPen
+def customization_locations(path):
+    """Return the axis values of each font element of fonts_customization.xml, by file."""
+    locations = {}
 
+    for font in xml.etree.ElementTree.parse(path).getroot().iter("font"):
+        axes = {
+            axis.get("tag"): float(axis.get("stylevalue"))
+            for axis in font.findall("axis")
+        }
+        locations.setdefault(font.text.strip(), []).append(axes)
+
+    return locations
+
+
+def full_location(font, axes):
+    """Return axes with the default of every axis they do not set, as Android does."""
+    location = {axis.axisTag: axis.defaultValue for axis in font["fvar"].axes}
+    location.update(axes)
+
+    return location
+
+
+def start_worker(library_paths, source_path, output_path):
+    # Workers start in a fresh interpreter, so they import fontTools and load the fonts
+    # themselves, once per process.
+    sys.path[:0] = library_paths
+    from fontTools.ttLib import TTFont
+
+    worker["source"] = TTFont(source_path)
+    worker["output"] = TTFont(output_path)
+    worker["glyph_names"] = worker["output"].getGlyphOrder()
+
+
+def glyph_width(glyph_set, name, pen, draw):
     # Use one glyph object: without HVAR, drawing sets its width from the gvar phantom
     # points, and a new lookup would return the default width.
     glyph = glyph_set[name]
-    pen = RecordingPen()
-    glyph.draw(pen)
 
-    return pen.value, glyph.width
+    if draw:
+        glyph.draw(pen)
+
+    return glyph.width
 
 
-def same_glyph(source, output):
-    # fontTools rounds an advance taken from the gvar phantom points with otRound but
-    # keeps the fraction of one taken from HVAR, so they can differ by half a unit.
-    return source[0] == output[0] and abs(source[1] - output[1]) <= 0.5
+def compare_location(location, compare_outlines):
+    """Return the glyphs whose advance, or outline if asked, differs at location."""
+    from fontTools.pens.basePen import NullPen
+    from fontTools.pens.recordingPen import RecordingPen
+
+    source, output = worker["source"], worker["output"]
+    source_glyphs = source.getGlyphSet(location=location)
+    output_glyphs = output.getGlyphSet(location=location)
+
+    # A font with HVAR has its advances without drawing.
+    draw_source = compare_outlines or "HVAR" not in source
+    draw_output = compare_outlines or "HVAR" not in output
+
+    mismatches = []
+
+    for name in worker["glyph_names"]:
+        if compare_outlines:
+            source_pen, output_pen = RecordingPen(), RecordingPen()
+        else:
+            source_pen = output_pen = NullPen()
+
+        source_width = glyph_width(source_glyphs, name, source_pen, draw_source)
+        output_width = glyph_width(output_glyphs, name, output_pen, draw_output)
+
+        # fontTools rounds an advance taken from the gvar phantom points with otRound but
+        # keeps the fraction of one taken from HVAR, so they can differ by half a unit.
+        advance_differs = abs(source_width - output_width) > 0.5
+        outline_differs = compare_outlines and source_pen.value != output_pen.value
+
+        if advance_differs or outline_differs:
+            mismatches.append(name)
+
+    return mismatches
 
 
 def script_feature_indices(font, tag, scripts):
@@ -499,7 +542,7 @@ def check_cmap(source, output, reference, overrides, font_overrides):
     )
 
 
-def check_glyphs(output_name, source, output, overrides):
+def check_glyphs(source, output, overrides):
     glyph_names = output.getGlyphOrder()
     kept_glyphs = set(glyph_names)
 
@@ -537,24 +580,47 @@ def check_glyphs(output_name, source, output, overrides):
     identical = not (glyf_mismatches or hmtx_mismatches or gvar_mismatches)
     print(f"  {len(glyph_names)} glyphs: glyf, hmtx and gvar identical: {identical}")
 
-    # A glyph set at a location applies avar, gvar and HVAR per glyph, which is much
-    # faster than instancing whole fonts.
-    for location in LOCATIONS[output_name]:
-        source_glyphs = source.getGlyphSet(location=location)
-        output_glyphs = output.getGlyphSet(location=location)
 
-        mismatches = [
-            name
-            for name in glyph_names
-            if not same_glyph(
-                recorded(source_glyphs, name), recorded(output_glyphs, name)
+def check_locations(output_name, output, customization, worker_arguments):
+    # glyf, hmtx, gvar, fvar and avar are already identical, so outlines cannot differ at
+    # any location and are compared only at the default and the axis extremes. Advances
+    # can, because Google Sans Flex has no HVAR and takes them from the gvar phantom
+    # points, so they are compared at every location fonts_customization.xml uses.
+    axes = output["fvar"].axes
+    axis_tags = {axis.axisTag for axis in axes}
+    extremes = [
+        {},
+        {axis.axisTag: axis.minValue for axis in axes},
+        {axis.axisTag: axis.maxValue for axis in axes},
+    ]
+
+    used = []
+
+    for location in customization.get(output_name, []):
+        unknown = sorted(set(location) - axis_tags)
+        check(not unknown, f"fonts_customization.xml sets missing axes {unknown}")
+
+        if location not in used:
+            used.append(location)
+
+    tasks = [(full_location(output, location), True) for location in extremes]
+    tasks += [(full_location(output, location), False) for location in used]
+
+    # Each location takes seconds in fontTools, so they run in parallel.
+    with concurrent.futures.ProcessPoolExecutor(
+        initializer=start_worker, initargs=worker_arguments
+    ) as executor:
+        results = executor.map(compare_location, *zip(*tasks))
+
+        for (location, compare_outlines), mismatches in zip(tasks, results):
+            compared = "outline or advance" if compare_outlines else "advance"
+            check(
+                not mismatches,
+                f"{compared} differs at {location} for {mismatches[:10]}",
             )
-        ]
-        check(
-            not mismatches,
-            f"outline or advance differs at {location} for {mismatches[:10]}",
-        )
-        print(f"  at {location}: {len(glyph_names)} glyphs match: {not mismatches}")
+
+    print(f"  outlines and advances match at {len(extremes)} locations")
+    print(f"  advances match at {len(used)} locations of fonts_customization.xml")
 
 
 def check_layout(source, output, reference):
@@ -614,7 +680,7 @@ def check_layout(source, output, reference):
     )
 
 
-def check_font(output_name, upstream_font, overrides, arguments):
+def check_font(output_name, upstream_font, overrides, customization, arguments):
     from fontTools.ttLib import TTFont
 
     source_path = os.path.join(arguments.input, upstream_font["source"])
@@ -638,7 +704,12 @@ def check_font(output_name, upstream_font, overrides, arguments):
     check_tables(source, output, reference)
     check_metrics(source, output, reference, font_overrides)
     check_cmap(source, output, reference, overrides, font_overrides)
-    check_glyphs(output_name, source, output, overrides)
+    check_glyphs(source, output, overrides)
+
+    library_paths = [os.path.abspath(arguments.fonttools)]
+    worker_arguments = (library_paths, source_path, output_path)
+    check_locations(output_name, output, customization, worker_arguments)
+
     check_layout(source, output, reference)
 
 
@@ -689,9 +760,12 @@ def main():
 
     upstream = common.load_yaml(common.UPSTREAM_PATH)
     overrides = common.load_yaml(common.OVERRIDES_PATH)
+    customization = customization_locations(
+        os.path.join(arguments.module, "fonts_customization.xml")
+    )
 
     for output_name, upstream_font in upstream["fonts"].items():
-        check_font(output_name, upstream_font, overrides, arguments)
+        check_font(output_name, upstream_font, overrides, customization, arguments)
 
     print("RESULT: " + ("PASS" if not failures else f"FAIL ({len(failures)})"))
     sys.exit(1 if failures else 0)
